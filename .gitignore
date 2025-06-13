@@ -1,11 +1,14 @@
-/Notes/
-# 排除 Python 編譯產物
-__pycache__/
-*.pyc
-
-# 排除本地資料庫與機密設定
-database.db
-*.sqlite3
-.env
-instance/
+# 開發工具相關
 .idea/
+.vscode/
+__pycache__/
+
+# 資料庫與個人資料
+*.db
+*.sqlite
+Notes/
+note/
+
+# 系統自動產物
+.DS_Store
+*.pyc
