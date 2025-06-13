@@ -1,0 +1,282 @@
+✅ 第一步：安裝套件與基本初始化
+📦 安裝需要的套件
+
+請在你的虛擬環境中安裝以下兩個套件：
+
+pip install flask-login flask-bcrypt
+
+    flask-login: 處理使用者登入狀態管理
+
+    flask-bcrypt: 處理密碼加密與驗證
+
+📁 專案架構（假設你使用的是以下結構）：
+
+your_project/
+│
+├── app.py
+├── models.py
+├── routes/
+│   ├── __init__.py
+│   ├── auth.py        ← 我們會新增這個檔案
+│
+├── templates/
+│   ├── login.html
+│   ├── register.html
+│
+├── utils.py
+└── ...
+
+🧠 在 models.py 中新增使用者模型
+
+✍️ 修改範例（加入 User 模型）
+
+class User(Base, UserMixin):
+    __tablename__ = "user"
+    id = Column(Integer, primary_key=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+
+
+
+✅ app.py（整合後範例）
+
+from flask import Flask
+from flask_login import LoginManager
+from routes import register_routes
+from models import User, Session  # 從 models 匯入 User 模型與 Session 工廠
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key'
+# 用於 session 加密，是 Flask-Login 管理登入狀態所必需的（可設為任意長字串）
+
+# 初始化 LoginManager，讓 Flask-Login 能管理使用者登入狀態
+login_manager = LoginManager()
+login_manager.login_view = 'auth.login'
+# 指定未登入使用者如果訪問需要登入的頁面時，自動導向的 endpoint 名稱（後面我們會在 routes/auth.py 中實作 `login`）
+
+login_manager.init_app(app)
+
+# 這個函式讓 Flask-Login 知道「如何根據 user_id 找出對應的使用者」
+# 每次頁面刷新、登入狀態檢查都會自動觸發
+@login_manager.user_loader
+def load_user(user_id):
+    with Session() as session:
+        return session.get(User, int(user_id))
+        # 這裡的 session 是你自己建立的資料庫操作環境
+        # session.get(User, id) 會回傳符合 id 的 User 物件，或是 None
+
+# 註冊你所有 routes（包含 auth 登入/註冊頁面、記帳功能頁面等）
+register_routes(app)
+
+# 測試用首頁
+@app.route("/")
+def home():
+    return "Home page"
+
+🧠 小提醒（目前為止你要理解的重點）：
+區塊	重點
+SECRET_KEY	保護 session，讓登入狀態不會被竄改
+LoginManager	Flask-Login 登入系統核心元件
+login_view = 'auth.login'	未登入時跳轉的頁面，需在 routes/auth.py 中定義 login
+@login_manager.user_loader	登入時根據 user_id 從資料庫撈出 User 物件給 Flask-Login 使用
+with Session() as session:	每次資料庫操作開一個新的安全 session 區塊（自動關閉）
+
+你可以花點時間確認這段是否完全理解，如果有任何地方不清楚我可以針對那部分補充。
+
+如果這段你已經 OK，下一步我們就開始進行：
+
+✅ 建立 routes/auth.py
+✅ 註冊表單頁面（含密碼加密）
+✅ 儲存新用戶進資料庫
+
+等你說「可以開始下一步」，我就帶你進入註冊功能的實作！
+
+我們現在進入 使用者註冊功能實作。這一階段會包含三個主要部分：
+🧩 第一步：建立 /register 路由與 HTML 表單顯示
+✅ 1. routes/auth.py 建立基本註冊邏輯
+
+如果你還沒有這個檔案，先建立：
+
+your_project/
+└── routes/
+    └── auth.py
+
+接著在 auth.py 裡填入這段初始碼：
+
+from flask import Blueprint, render_template, request, redirect, flash, url_for
+from werkzeug.security import generate_password_hash
+from models import Session, User
+from flask_login import login_user
+
+auth = Blueprint("auth", __name__)
+
+@auth.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        # 基本檢查
+        if not username or not password:
+            flash("請輸入帳號與密碼")
+            return redirect(url_for("auth.register"))
+
+        with Session() as session:
+            existing_user = session.query(User).filter_by(username=username).first()
+            if existing_user:
+                flash("此帳號已存在")
+                return redirect(url_for("auth.register"))
+
+            # 加密密碼
+            hashed_password = generate_password_hash(password)
+            new_user = User(username=username, password_hash=hashed_password)
+            session.add(new_user)
+            session.commit()
+
+            login_user(new_user)  # 註冊完成直接登入
+            return redirect(url_for("home"))
+
+    return render_template("register.html")
+
+✅ 2. templates/register.html 建立註冊表單
+
+請在 templates/ 資料夾中新增 register.html，內容如下：
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>註冊</title>
+</head>
+<body>
+    <h2>註冊帳號</h2>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for msg in messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+        <label for="username">帳號：</label>
+        <input type="text" name="username" required><br>
+        <label for="password">密碼：</label>
+        <input type="password" name="password" required><br>
+        <button type="submit">註冊</button>
+    </form>
+</body>
+</html>
+
+✅ 3. 在 routes/__init__.py 中註冊 auth blueprint
+
+from .auth import auth
+
+def register_routes(app):
+    app.register_blueprint(auth)
+
+✅ 4. 測試流程
+
+啟動 Flask 後，訪問 /register 應該會看到表單，提交帳密後會：
+
+    檢查帳號是否已存在
+
+    使用 werkzeug.security.generate_password_hash() 進行加密
+
+    寫入資料庫
+
+    成功後自動登入並跳轉首頁
+
+📌 目前為止你應該完成：
+功能	狀態
+/register 頁面	✅ 顯示正常
+表單送出	✅ 儲存新使用者到資料庫
+密碼加密	✅ 已處理
+註冊後自動登入	✅ 搭配 Flask-Login 已啟用
+
+你可以先照這部分完成與測試，有任何錯誤訊息我可以協助除錯。如果你完成這一步沒問題，下一步就是登入功能 /login 的實作，我們再一起做。你準備好再告訴我！
+
+🔐 登入功能實作目標：
+
+    顯示登入表單（GET）
+
+    使用者送出帳密後（POST）檢查帳號是否存在
+
+    比對密碼是否正確（使用 check_password_hash()）
+
+    如果成功就登入並跳轉；失敗則 flash 訊息並返回表單
+
+✅ 1. 修改 routes/auth.py 加入 /login 路由
+
+在你現有的 auth.py 中新增：
+
+from werkzeug.security import check_password_hash
+from flask_login import login_user
+
+@auth.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        if not username or not password:
+            flash("請輸入帳號與密碼")
+            return redirect(url_for("auth.login"))
+
+        with Session() as session:
+            user = session.query(User).filter_by(username=username).first()
+            if not user or not check_password_hash(user.password_hash, password):
+                flash("帳號或密碼錯誤")
+                return redirect(url_for("auth.login"))
+
+            login_user(user)
+            return redirect(url_for("home"))
+
+    return render_template("login.html")
+
+✅ 2. 建立 templates/login.html 登入頁面
+
+在 templates/ 資料夾中新增 login.html：
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>登入</title>
+</head>
+<body>
+    <h2>登入系統</h2>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for msg in messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+        <label for="username">帳號：</label>
+        <input type="text" name="username" required><br>
+        <label for="password">密碼：</label>
+        <input type="password" name="password" required><br>
+        <button type="submit">登入</button>
+    </form>
+</body>
+</html>
+
+✅ 3. 測試流程
+
+啟動你的 Flask 專案，訪問 /login：
+
+    輸入一個錯誤帳密，應該會出現錯誤提示（flash）
+
+    輸入正確帳密，應該會跳轉到 / 並保持登入狀態
+
+🧠 登入流程邏輯回顧：
+步驟	說明
+使用者送出帳密	POST 表單
+查找該帳號	session.query(User)...
+驗證密碼	用 check_password_hash() 對比加密後密碼
+登入	login_user(user) 會在瀏覽器設置 cookie，保持登入狀態
+
+你完成登入功能之後告訴我，我們可以接著實作登出功能 logout()，以及如何讓某些頁面「只限登入使用者」才能瀏覽（保護帳務資料）。完成後也可以順便做資料隔離！你先完成這部分我再接著帶。

@@ -1,0 +1,11 @@
+/Notes/
+# 排除 Python 編譯產物
+__pycache__/
+*.pyc
+
+# 排除本地資料庫與機密設定
+database.db
+*.sqlite3
+.env
+instance/
+.idea/

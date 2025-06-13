@@ -1,0 +1,191 @@
+我們進入【步驟四】：新增收支記錄表單功能！
+🔹目標功能：
+
+    在 /expenses 頁面上新增一個表單
+
+    可輸入：分類 category、金額 amount、收支類型 type（收入/支出）、日期 date、備註 note
+
+    提交表單後，寫入資料庫並導回 /expenses 頁面
+
+🧩 任務說明：
+
+請你嘗試完成以下兩件事（不給答案，讓你動手實作）：
+1️⃣ 修改 expenses.py 加入 POST 處理邏輯
+
+目標：
+
+    使用 @expense_bp.route("/expenses", methods=["GET", "POST"])
+
+    當 POST 時，接收表單資料，寫入 Expense 資料表
+
+你會需要的工具有：
+
+    request.form.get(...)
+
+    datetime.strptime(...)（將表單的日期轉為 datetime）
+
+    建立 Expense(...) 實例並 session.add(...)
+
+2️⃣ 修改 expenses.html 加入表單區塊
+
+表單欄位需包含：
+
+    分類 category（text）
+
+    金額 amount（number）
+
+    收支類型 type（選單 income/expense）
+
+    日期 date（date）
+
+    備註 note（textarea 或 text）
+
+表單送出方式：method="POST"，action 不填表示送到 /expenses
+
+當你完成後，回報我：
+
+    我會幫你檢查是否正確
+
+    若有錯誤會給提示或範例
+
+    成功後我們再進入步驟五「每月統計報表」
+
+✅ Flask 表單處理基礎教學
+🔸 什麼是 GET 與 POST？
+
+    GET：用來「取得」資料，例如網頁瀏覽或查詢（網址會帶參數）
+
+    POST：用來「傳送」資料，例如送出表單新增資料（不會出現在網址上）
+
+🧪 示範範例
+🧱 Flask 路由設計（含 GET 與 POST）：
+
+from flask import Flask, request, render_template, redirect
+
+app = Flask(__name__)
+
+@app.route("/form", methods=["GET", "POST"])
+def form_example():
+    if request.method == "POST":
+        name = request.form.get("name")
+        return f"Hello, {name}!"
+    return '''
+        <form method="POST">
+            請輸入名字：<input type="text" name="name">
+            <button type="submit">送出</button>
+        </form>
+    '''
+
+🔍 關鍵語法說明：
+語法	說明
+methods=["GET", "POST"]	告訴 Flask 這個 route 同時支援 GET 與 POST
+request.method	判斷目前請求是 GET 還是 POST
+request.form.get("欄位名稱")	取得表單欄位的值（POST 時使用）
+return redirect("/expenses")	表單處理完後導回某頁（常見用法）
+🧰 你的應用場景會是這樣：
+expenses.py
+
+@expense_bp.route("/expenses", methods=["GET", "POST"])
+def expense():
+    if request.method == "POST":
+        # 取得表單資料
+        category = request.form.get("category")
+        amount = request.form.get("amount")
+        # 轉成正確格式並存入資料庫...
+
+    # GET 請求時顯示頁面
+    return render_template("expenses.html")
+
+expenses.html
+
+<form method="POST">
+    分類: <input type="text" name="category"><br>
+    金額: <input type="number" name="amount"><br>
+    <button type="submit">新增</button>
+</form>
+
+📌 小提醒
+
+    GET 用來查詢（例如搜尋關鍵字）
+
+    POST 用來送資料（例如新增或註冊）
+
+🔜 下一階段：步驟四 - 建立統計頁面 summary.html
+
+目標是：
+
+    建立 /summary 頁面
+
+    顯示：
+
+        總收入
+
+        總支出
+
+        收支淨額
+
+        各分類統計（支出佔比）
+
+請你依照這些指示，嘗試建立：
+
+    routes/summary.py（建立 Blueprint 與路由）
+
+    templates/summary.html
+
+    utils/report_service.py 中新增報表函式：get_summary_data()
+
+✅ 問題 1：只有在 HTML 中限制 type 選項是否足夠？
+
+<select name="type" required>
+  <option value="income">收入</option>
+  <option value="expense">支出</option>
+</select>
+
+這樣的確可以在「正常使用者操作下」避免輸入錯誤，但仍然不夠安全，因為：
+
+    使用者可以透過開發者工具改動 HTML 後送出非法值（例如 type=hack）。
+
+    未來若你改用 API 或其他輸入方式，就無法只靠前端控制。
+
+✅ 解決方法（推薦）：
+
+在後端進行輸入驗證，例如在你處理 POST 表單時檢查 type 值：
+
+valid_types = {"income", "expense"}
+if request.form.get("type") not in valid_types:
+    return "Invalid type", 400
+
+進階一點，也可以在資料庫層用 Enum 限制欄位輸入，例如：
+
+from sqlalchemy import Enum
+class Expense(Base):
+    ...
+    type = Column(Enum("income", "expense", name="expense_type"))
+
+但一開始練習不一定要用 Enum，先學會驗證邏輯更實用。
+✅ 問題 2：顯示成百分比的方式？
+
+目前你有：
+
+rate = round(total_spend / total_income, 2)
+
+這是個小數（例如 0.53），若要在畫面顯示成「53%」，你可以：
+方法一：Python 端直接乘以 100
+
+rate_percent = f"{int(rate * 100)}%"
+
+方法二：HTML 中用 Jinja2 計算
+
+在 summary.html 中：
+
+<p>收支占比：{{ rate * 100 }}%</p>
+
+加 | round(2) 會更美觀：
+
+<p>收支占比：{{ (rate * 100) | round(2) }}%</p>
+
+✅ 小結建議：
+問題	建議做法
+前端表單限制 type	✔ 是必要但不夠
+後端應檢查是否合法值	✔ 強烈建議，簡單 if 判斷即可
+顯示成百分比	✔ 可以在後端或前端處理，取決於誰負責格式化

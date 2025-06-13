@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>收支統計報表</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+            background-color: #f8f9fa;
+        }
+        h2 {
+            color: #333;
+        }
+        .container {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+        .table-box {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 16px;
+            text-align: center;
+        }
+        th {
+            background-color: #e9ecef;
+        }
+        .income {
+            color: #28a745;
+        }
+        .expense {
+            color: #dc3545;
+        }
+        .chart-box {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+<a href="{{ url_for('expense.expense') }}">
+    <button>回到收支紀錄</button>
+<div style="display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+    <p style="margin: 0; font-weight: bold;">你好，{{ current_user.username }}</p>
+    <a href="{{ url_for('auth.logout') }}">
+        <button>登出</button>
+    </a>
+</div>
+
+    <h2>📊 分類統計報表</h2>
+    <div class="container">
+        <div class="table-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>分類</th>
+                        <th>收入</th>
+                        <th>支出</th>
+                        <th>小計</th>
+                        <th>占比</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat, data in summary.items() %}
+                    <tr>
+                        <td>{{ cat }}</td>
+                        <td class="income">{{ data.income }}</td>
+                        <td class="expense">{{ data.expense }}</td>
+                        <td>{{ data.total }}</td>
+                        <td>{{ data.rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+<h2>💰 收入與支出總覽</h2>
+<div class="chart-box" style="width: 400px;">
+    <canvas id="totalChart" width="350" height="350"></canvas>
+</div>
+        <div class="chart-box">
+            <canvas id="categoryChart" width="350" height="350"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for cat, data in summary.items() %}'{{ cat }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for cat, data in summary.items() %}{{ data.total }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        '#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1', '#17a2b8'
+                    ]
+                }]
+            },
+            options: {
+                responsive: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        const totalCtx = document.getElementById('totalChart').getContext('2d');
+new Chart(totalCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['收入', '支出'],
+        datasets: [{
+            data: [{{ total_income }}, {{ total_expense }}],
+            backgroundColor: ['#28a745', '#dc3545']
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+    </script>
+</body>
+</html>
+

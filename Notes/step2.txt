@@ -1,0 +1,75 @@
+✅ 步驟二任務：建立 routes/expenses.py 與 templates/expenses.html
+
+以下是你要自己實作的部分，我只給 清楚的任務說明，不提供程式碼，讓你練習邏輯與撰寫。
+🧭 1. 在 routes/expenses.py 中完成以下內容：
+
+    建立 Blueprint expenses_bp
+
+    設定路由 /expenses 支援 GET 與 POST
+
+GET：
+
+    從資料庫查詢所有 Expense 記錄（預設按日期排序）
+
+    傳到 expenses.html 顯示
+
+POST：
+
+    接收表單資料，包含：
+
+        category（分類）
+
+        amount（金額）
+
+        type（收入或支出）
+
+        date（可選，若無預設現在時間）
+
+        note（備註）
+
+    建立一筆 Expense 新資料並加入資料庫
+
+    儲存後 redirect 回 /expenses，重新顯示
+
+🧭 2. 在 templates/expenses.html 中設計表單與資料列表
+
+請包含以下元素：
+
+    表單欄位：
+
+        分類（文字）
+
+        金額（數字）
+
+        類型（可用 <select>，收入/支出）
+
+        日期（type="date"）
+
+        備註（可選）
+
+    表格顯示目前所有記錄，欄位包含：
+
+        分類
+
+        金額
+
+        類型
+
+        日期
+
+        備註
+
+🔧 3. 問題提示：expenses.html 要在哪裡建立 route？
+
+    ➤ expenses.html 是模板，對應的是你在 routes/expenses.py 中設計的 /expenses 路由，你只需要在 expenses.py 中使用：
+
+return render_template("expenses.html", ...)
+
+⚠️ 不需要為 HTML 檔案單獨設路由，它是被 Flask 的 render_template() 呼叫來渲染的。
+✅ 建立完畢後請告訴我：
+
+    你已完成 expenses.py 和 expenses.html
+
+    頁面能正確新增與顯示資料
+
+我會幫你檢查並進入 步驟三：查詢與篩選功能設計。如果卡關也可以隨時求救。加油！

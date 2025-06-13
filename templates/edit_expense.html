@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>編輯紀錄</title>
+</head>
+<body>
+    <h2>編輯收支紀錄</h2>
+    <form method="POST">
+        <label>分類：</label>
+        <input type="text" name="category" value="{{ expense.category }}" required><br>
+
+        <label>金額：</label>
+        <input type="number" name="amount" value="{{ expense.amount }}" required><br>
+
+        <label>類型：</label>
+        <select name="type" required>
+            {% if expense.type == 'income' %}
+                <option value="income" selected>收入</option>
+                <option value="expense">支出</option>
+            {% else %}
+                <option value="income">收入</option>
+                <option value="expense" selected>支出</option>
+            {% endif %}
+        </select><br>
+
+        <label>日期：</label>
+        <input type="date" name="date" value="{{ expense.date.strftime('%Y-%m-%d') }}"><br>
+
+        <label>備註：</label>
+        <input type="text" name="note" value="{{ expense.note }}"><br>
+
+        <button type="submit">💾 更新</button>
+        <a href="{{ url_for('expense.expense') }}"><button type="button">取消</button></a>
+    </form>
+</body>
+</html>
+

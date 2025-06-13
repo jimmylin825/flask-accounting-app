@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>註冊</title>
+</head>
+<body>
+    <h2>註冊帳號</h2>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for msg in messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+        <label for="username">帳號：</label>
+        <input type="text" name="username" required><br>
+        <label for="password">密碼：</label>
+        <input type="password" name="password" required><br>
+        <button type="submit">註冊</button>
+    </form>
+</body>
+</html>

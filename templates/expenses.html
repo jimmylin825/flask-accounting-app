@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>收支記帳系統</title>
+    <style>
+        .sort-controls {
+            text-align: right;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .sort-controls label {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #495057;
+        }
+        .sort-controls a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+        .sort-controls a:hover {
+            text-decoration: underline;
+            color: #0056b3;
+        }
+        body {
+            font-family: "Segoe UI", sans-serif;
+            margin: 40px;
+            background-color: #f8f9fa;
+        }
+        h1, h2 {
+            color: #343a40;
+        }
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        label {
+            display: inline-block;
+            width: 80px;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        input, select {
+            padding: 5px;
+            margin-bottom: 10px;
+            width: 200px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        tr:nth-child(even) {
+            background-color: #f1f3f5;
+        }
+        .summary-chart-container {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+<div style="display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+    <p style="margin: 0; font-weight: bold;">你好，{{ current_user.username }}</p>
+    <a href="{{ url_for('auth.logout') }}">
+        <button>登出</button>
+    </a>
+</div>
+<h1>收支記帳系統</h1>
+<a href="/summary">查看統計報表</a>
+
+<div style="display: flex; gap: 200px; align-items: flex-start;">
+    <div>
+        <h1>新增收支記錄</h1>
+        <form method="POST" action="/expenses">
+            <label>分類：</label>
+            <select name="category" required>
+                <option value="餐飲">餐飲</option>
+                <option value="交通">交通</option>
+                <option value="娛樂">娛樂</option>
+                <option value="房租">房租</option>
+                <option value="醫療">醫療</option>
+                <option value="其他">其他</option>
+            </select><br>
+            <label>金額：</label>
+            <input type="number" name="amount" required><br>
+            <label>類型：</label>
+            <select name="type" required>
+                <option value="income">收入</option>
+                <option value="expense">支出</option>
+            </select><br>
+            <label>日期：</label>
+            <input type="date" name="date" required><br>
+            <label>備註：</label>
+            <input type="text" name="note"><br>
+            <button type="submit">新增</button>
+        </form>
+    </div>
+    <div>
+        <h1>查詢收支記錄</h1>
+        <form method="GET" action="/expenses">
+            <label>分類：</label>
+            <select name="category">
+                <option value="">全部</option>
+                <option value="餐飲">餐飲</option>
+                <option value="交通">交通</option>
+                <option value="娛樂">娛樂</option>
+                <option value="房租">房租</option>
+                <option value="醫療">醫療</option>
+                <option value="其他">其他</option>
+            </select><br>
+            <label>類型：</label>
+            <select name="type">
+                <option value="">全部</option>
+                <option value="income">收入</option>
+                <option value="expense">支出</option>
+            </select><br>
+            <label>起始日期：</label>
+            <input type="date" name="start"><br>
+            <label>結束日期：</label>
+            <input type="date" name="end"><br>
+            <button type="submit">查詢</button>
+        </form>
+    </div>
+</div>
+
+<div style="display: flex; justify-content: flex-end; gap: 10px; margin: 20px 0;">
+    <form method="get" action="/export_csv">
+        {% for key, value in request.args.items() %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+        <button type="submit">匯出報表（CSV）</button>
+    </form>
+
+    <form method="get" action="/export_excel">
+        {% for key, value in request.args.items() %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+        <button type="submit">匯出報表（EXCEL）</button>
+    </form>
+</div>
+
+<div class="summary-chart-container">
+    <div class="summary-box">
+        <h2>統計摘要</h2>
+        <p>總收入：{{ summary.total_income }}</p>
+        <p>總支出：{{ summary.total_spend }}</p>
+        <p>淨收益：{{ summary.net_gross }}</p>
+        <p>支出占比：{{ summary.rate }}%</p>
+    </div>
+    <canvas id="chartSummaryInline" width="300" height="300"></canvas>
+</div>
+
+<h2>收支紀錄</h2>
+
+<div class="sort-controls">
+    <label>排序：</label>
+    <a href="?sort_by=amount&order=asc">💰 金額 ↑</a>
+    <a href="?sort_by=amount&order=desc">💰 金額 ↓</a>
+    <a href="?sort_by=date&order=asc">🕒 時間 ↑</a>
+    <a href="?sort_by=date&order=desc">🕒 時間 ↓</a>
+</div>
+
+<table>
+
+    <tr>
+        <th>分類</th>
+        <th>金額</th>
+        <th>類型</th>
+        <th>日期</th>
+        <th>備註</th>
+
+    </tr>
+    {% for expense in expenses %}
+    <tr>
+        <td>{{ expense.category }}</td>
+        <td>{{ expense.amount }}</td>
+        <td>
+            {% if expense.type == 'income' %}收入
+            {% elif expense.type == 'expense' %}支出
+            {% else %}未知{% endif %}
+        </td>
+        <td>{{ expense.date.strftime("%Y-%m-%d") }}</td>
+        <td>{{ expense.note }}</td>
+        <td>
+            <a href="{{ url_for('expense.edit_expense', id=expense.id) }}">
+                <button>✏️ 編輯</button>
+            </a>
+            <a href="{{ url_for('expense.delete_expense', id=expense.id) }}">
+                <button>🗑️ 刪除</button>
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('chartSummaryInline').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['收入', '支出'],
+            datasets: [{
+                data: [{{ summary.total_income }}, {{ summary.total_spend }}],
+                backgroundColor: ['#28a745', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+</body>
+</html>
